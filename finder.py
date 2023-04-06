@@ -28,19 +28,19 @@ def debug_warning(msg):
 
 def scan_for_https(ip: str) -> [bool, str]:
     try:
-        response = requests.get('https://' + ip, timeout=5)
-        if response.status_code == 200:
-            return True, "https"
         response = requests.get('http://' + ip, timeout=5)
-        if response.status_code == 200:
+        if response.status_code == 200 and response.headers["title"] == "Apache2 Ubuntu Default Page":
             return True, "http"
+        response = requests.get('https://' + ip, timeout=5)
+        if response.status_code == 200 and response.headers["title"] == "Apache2 Ubuntu Default Page":
+            return True, "https"
         return False, ""
     except requests.exceptions.Timeout:
         return False, ""
     except requests.exceptions.ConnectionError:
         return False, ""
     except Exception as e:
-        return False, "ftp"
+        return False, ""
 
 
 def scan_for_ftp(ip: str) -> [bool, str]:
@@ -86,12 +86,11 @@ def thread_process():
         if ftp_request[0]:
             ip_information["allowed_protocols"].append((ftp_request[1], "21"))
 
-        if len(ip_information["allowed_protocols"]) == 0:
-            debug_warning(f"No protocols found for {ip_to_scan}")
-        else:
+        if len(ip_information["allowed_protocols"]) != 0:
             debug_msg(f"{ip_to_scan}\n")
             for prot in ip_information["allowed_protocols"]:
                 debug_msg(f"Protocol: {prot[0]} ({prot[1]})")
+
 
 
 
