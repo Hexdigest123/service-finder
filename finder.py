@@ -6,6 +6,8 @@ import requests
 import ftplib
 import sys
 from colorama import Fore, Back, Style
+import ssl
+from bs4 import BeautifulSoup
 
 MAX_NUMBER_OF_THREADS = 1  # maximum numbers of threads is usually 300
 
@@ -28,13 +30,18 @@ def debug_warning(msg):
 
 def scan_for_https(ip: str) -> [bool, str]:
     try:
-        response = requests.get('http://' + ip, timeout=5)
-        if response.status_code == 200 and response.headers["title"] == "Apache2 Ubuntu Default Page":
-            return True, "http"
-        response = requests.get('https://' + ip, timeout=5)
-        if response.status_code == 200 and response.headers["title"] == "Apache2 Ubuntu Default Page":
-            return True, "https"
-        return False, ""
+        with socket.socket() as sock:
+            if sock.connect_ex((ip, 80)) == 0:
+                soup = BeautifulSoup(requests.get(f"http://{ip}/", timeout=5).text, "html.parser")
+                if "Apache2 Ubuntu Default Page: It works" in soup.title:
+                    return False, ""
+                return True, "http"
+            if sock.connect_ex((ip, 443)) == 0:
+                soup = BeautifulSoup(requests.get(f"http://{ip}/", timeout=5).text, "html.parser")
+                if "Apache2 Ubuntu Default Page: It works" in soup.title:
+                    return False, ""
+                return True, "https"
+            return False, ""
     except requests.exceptions.Timeout:
         return False, ""
     except requests.exceptions.ConnectionError:
